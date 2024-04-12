@@ -1,0 +1,3 @@
+# run pip install -r group_7_requirements.txt to install the required packages
+
+paho-mqtt==2.0.9a
