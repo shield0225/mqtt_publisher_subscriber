@@ -2,10 +2,12 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from datetime import datetime
 import json
+import group_7_basepublisher as basepublisher
 from group_7_SafeLogger import SafeLogger
 from group_7_publisher_heartrate import HeartRatePublisher
 from group_7_publisher_bloodpressure import BloodPressurePublisher
 from group_7_publisher_sp02 import SpO2Publisher
+import group_7_config as config
 
 class App:
     def __init__(self, master):
@@ -13,34 +15,67 @@ class App:
         master.title("Group 7 - Health Data Publisher Simulator")
         
         self.logger = SafeLogger()
+        print(f"Logger initialized in App: {self.logger}")
 
-        self.heart_publisher = HeartRatePublisher(lambda msg: self.logger.log(msg, "Heart Rate"), self.logger)
-        self.bp_publisher = BloodPressurePublisher(lambda msg: self.logger.log(msg, "Blood Pressure"), self.logger)
-        self.spo2_publisher = SpO2Publisher(lambda msg: self.logger.log(msg, "SpO2"), self.logger)
+        heart_rate_topic = "health/heart_rate"
+        blood_pressure_topic = "health/blood_pressure"
+        spo2_topic = "health/spo2"
+
+        self.heart_publisher = HeartRatePublisher(lambda msg: self.logger.log(msg, "Heart Rate"), self.logger, heart_rate_topic)
+        self.bp_publisher = BloodPressurePublisher(lambda msg: self.logger.log(msg, "Blood Pressure"), self.logger, blood_pressure_topic)
+        self.spo2_publisher = SpO2Publisher(lambda msg: self.logger.log(msg, "SpO2"), self.logger, spo2_topic)
 
         self.setup_data_displays_and_controls()
         
     def setup_data_displays_and_controls(self):
         """Data displays and corresponding controls"""
-        self.setup_topic_frame(0, "Heart Rate", self.heart_publisher)
-        self.setup_topic_frame(1, "Blood Pressure", self.bp_publisher)
-        self.setup_topic_frame(2, "SpO2", self.spo2_publisher)
+        # Create title frame
+        title_frame = tk.Frame(self.master, width=400, borderwidth=2, relief="groove", padx=1, pady=5)
+        title_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+        # Broker url and port from config file
+        tk.Label(title_frame, text="Publishing to Broker URL: " + config.MQTT_BROKER_URL, font=("Arial", 10)).pack(side=tk.LEFT)
+        tk.Label(title_frame, text="Port: " + str(config.MQTT_BROKER_PORT), font=("Arial", 10)).pack(side=tk.LEFT)
+
+        self.status_bar = tk.Label(title_frame, text="Connection Status: Disconnected", font=("Arial", 10))
+        # Check if already connected to the broker and update the status accordingly
+
+
+        if self.heart_publisher.on_connect and self.bp_publisher.on_connect and self.spo2_publisher.on_connect:
+            self.status_bar.config(text="Connection Status: Connected")
+
+        # Connect button
+        tk.Button(title_frame, text="Connect", command=self.connect, width=10).pack(side=tk.RIGHT)
+        # Disconnect button
+        tk.Button(title_frame, text="Disconnect", command=self.disconnect, width=10).pack(side=tk.RIGHT)
+
+        # Create contents frame
+        contents_frame = tk.Frame(self.master, width=400, borderwidth=2, relief="groove", padx=1, pady=5)
+        contents_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        tk.Label(contents_frame, text="Contents", font=("Arial", 11)).pack()
+        self.setup_topic_frame(1, "Heart Rate", self.heart_publisher)
+        self.setup_topic_frame(2, "Blood Pressure", self.bp_publisher)
+        self.setup_topic_frame(3, "SpO2", self.spo2_publisher)
 
     def setup_topic_frame(self, row, label, publisher):
         # Helper function to create a frame for each data topic.
         frame = tk.Frame(self.master, width=400, borderwidth=2, relief="groove", padx=1, pady=5)
         frame.grid(row=row, column=0, padx=10, pady=10, sticky="ew")
         self.master.columnconfigure(0, weight=1) 
-        tk.Label(frame, text=f"{label}:", font=("Arial", 11)).grid(row=0, column=0, sticky="w")
+        tk.Label(frame, text=f"{label}", font=("Arial", 10)).grid(row=0, column=0, sticky="w")
         display_label = tk.Label(frame, text="N/A", font=("Arial", 11))
         display_label.grid(row=0, column=1, sticky="w")
 
         # Setting up the log area for each publisher
-        log_frame = tk.Frame(frame, borderwidth=2, relief="sunken", padx=10, pady=10)
+        log_frame = tk.Frame(frame, borderwidth=2, relief="sunken", padx=10, pady=5)
         log_frame.grid(row=2, column=0, columnspan=4, rowspan=4, padx=10, pady=10, sticky='ew')
-        log_text = ScrolledText(log_frame, height=8, width=100)
+        log_text = ScrolledText(log_frame, height=6, width=100)
         log_text.pack(fill=tk.BOTH, expand=True)
         self.logger.register_log_widget(label, log_text)
+
+        # make frame interactive when resizing
+        frame.columnconfigure(0, weight=2)  
+        frame.bind("<Configure>", lambda event: self.update_log_width(log_frame, event))
 
         if label == "Heart Rate":
             self.heart_rate_value = display_label
@@ -54,40 +89,20 @@ class App:
         tk.Button(frame, text=f"Start", command=publisher.start, width=button_width).grid(row=2, column=8, padx=3, pady=3)
         tk.Button(frame, text=f"Stop", command=publisher.stop, width=button_width).grid(row=3, column=8, padx=3, pady=3)
         tk.Button(frame, text=f"Send Wild Data", command=lambda: self.send_wild_data(publisher), width=button_width).grid(row=4, column=8, padx=3, pady=3)
-        tk.Button(frame, text=f"Miss Transmission", command=lambda: self.miss_transmission(publisher), width=button_width).grid(row=5, column=8, padx=3, pady=3)
+        tk.Button(frame, text=f"Skip Transmission", command=lambda: self.miss_transmission(publisher), width=button_width).grid(row=5, column=8, padx=3, pady=3)
 
-    def handle_data(self, data):
-        """Process JSON data received from publishers and update GUI."""
-        try:
-            data = json.loads(data)
-            if 'heart_rate' in data:
-                self.master.after(0, lambda: self.heart_rate_value.config(text=f"{data['heart_rate']} bpm"))
-            if 'blood_pressure' in data:
-                bp = data['blood_pressure']
-                self.master.after(0, lambda: self.blood_pressure_value.config(text=f"{bp[0]}/{bp[1]} mmHg"))
-            if 'spO2' in data:
-                self.master.after(0, lambda: self.spo2_value.config(text=f"{data['spO2']}%"))
-        except json.JSONDecodeError:
-            self.log_message("Error decoding JSON data from publisher.")
-        except Exception as e:
-            self.log_message(f"Error processing data: {str(e)}")
-  
-    def update_data_display(self, data):
-        """Update the GUI with new data."""
-        if "heart_rate" in data:
-            self.heart_rate_value.config(text=f"{data['heart_rate']} bpm")
-        if "blood_pressure" in data:
-            self.blood_pressure_value.config(text=f"{data['blood_pressure'][0]}/{data['blood_pressure'][1]} mmHg")
-        if "spO2" in data:
-            self.spo2_value.config(text=f"{data['spO2']}%")
+    def update_log_width(self, log_frame, event):
+        # Update the width of the log frame based on the window size
+        width = event.width - 20 
+        log_frame.configure(width=width)
 
     def send_wild_data(self, publisher, label):
         # Implement functionality
         self.logger.log(f"Sending wild data for {label}", label)
 
-    def miss_transmission(self, publisher, label):
+    def skip_transmission(self, publisher, label):
         # Implement functionality
-        self.logger.log(f"Missed transmission for {label}", label)
+        self.logger.log(f"Skiped transmission for {label}", label)
 
 
     def setup_log_display(self):
@@ -104,8 +119,26 @@ class App:
         log_entry = f"[{timestamp}] {message}\n"
         self.logger.log(message, label)
 
+    def connect(self):
+        """Connect to the broker and update the connection status."""
+        basepublisher.BasePublisher.on_connect = True
+        self.heart_publisher.start()
+        self.bp_publisher.start()
+        self.spo2_publisher.start()
+        self.status_bar.config(text="Connection Status: Connected")
+        self.status_bar.pack()    
+
+    def disconnect(self):
+        """Disconnect from the broker and update the connection status."""
+        self.heart_publisher.stop()
+        self.bp_publisher.stop()
+        self.spo2_publisher.stop()
+        self.status_bar.config(text="Connection Status: Disconnected")
+        self.status_bar.pack()
+
 if __name__ == '__main__':
     root = tk.Tk()
     app = App(root)
-    root.geometry("1100x600")
+    root.geometry("1100x650")
+    root.resizable(True, True)
     root.mainloop()

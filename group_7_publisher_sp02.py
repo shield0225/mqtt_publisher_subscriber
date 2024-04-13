@@ -1,38 +1,40 @@
-import random
-import json
 import threading
-import time
-from datetime import datetime
 from group_7_basepublisher import BasePublisher
+from group_7_data_generator import Sp02DataGenerator
 
 class SpO2Publisher(BasePublisher):
-    def __init__(self, update_callback, logger, publish_interval=3):
-        super().__init__(update_callback)
+    def __init__(self, update_callback, logger, mqtt_topic):
+        super().__init__(update_callback, logger, mqtt_topic)
         self.logger = logger
-        self.publish_interval = publish_interval 
         self.active = False
+        self.topic = mqtt_topic
+        self.publish_interval = 3
+        self.data_generator = Sp02DataGenerator(self.publish_data, self.publish_interval)
+
+    def publish_data(self, data):
+        """Callback to publish data using MQTT."""
+        if self.active:
+            try:
+                self.client.publish(self.topic, data)
+                self.logger.log(f"Published data: {data}", "SpO2")
+            except Exception as e:
+                self.logger.log(f"Failed to publish data: {str(e)}", "SpO2")
 
     def start(self):
+        """Start the data generation and publishing process."""
         if not self.active:
             self.active = True
-            self.thread = threading.Thread(target=self.generate_data)
-            self.thread.daemon = True  
-            self.thread.start()
-            self.logger.log(f"Starting data generation... publish interval = {self.publish_interval}", "SpO2")
+            self.logger.log(f"Attempting to start data generation with interval: {self.publish_interval}", "SpO2")
+            self.data_generator.active = True
+            self.logger.log("Starting data generation and publisher...", "SpO2")
+            thread = threading.Thread(target=self.data_generator.generate_data)
+            thread.daemon = True
+            thread.start()
+            self.logger.log("Data generation started.", "SpO2")
 
     def stop(self):
+        """Stop the data generation and publishing process."""
+        self.data_generator.active = False
         self.active = False
         self.logger.log("Stopping data generation...", "SpO2")
 
-    def generate_data(self):
-        while True:
-            if not self.active:
-                break  
-            if self.transmissions_to_skip > 0:
-                self.transmissions_to_skip -= 1
-                continue
-            spo2 = random.randint(90, 100)
-            timestamp = datetime.now().isoformat()
-            data_package = {"timestamp": timestamp, "spO2": spo2}
-            self.update_callback(json.dumps(data_package))
-            time.sleep(self.publish_interval)
