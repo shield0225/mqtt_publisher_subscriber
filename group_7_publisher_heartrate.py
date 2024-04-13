@@ -8,7 +8,7 @@ class HeartRatePublisher(BasePublisher):
         self.logger = logger
         self.active = False
         self.topic = mqtt_topic
-        self.publish_interval = 3
+        self.publish_interval = 1
             
         self.data_generator = HeartRateDataGenerator(self.publish_data, self.publish_interval, self.logger)
 
