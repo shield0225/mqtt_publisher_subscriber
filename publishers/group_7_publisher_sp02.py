@@ -1,6 +1,6 @@
 import threading
-from group_7_basepublisher import BasePublisher
-from group_7_data_generator import Sp02DataGenerator
+from publishers.group_7_basepublisher import BasePublisher
+from data_generators.group_7_data_generator_sp02 import Sp02DataGenerator
 
 class SpO2Publisher(BasePublisher):
     def __init__(self, update_callback, logger, mqtt_topic):
@@ -37,4 +37,18 @@ class SpO2Publisher(BasePublisher):
         self.data_generator.active = False
         self.active = False
         self.logger.log("Stopping data generation...", "SpO2")
+
+    def send_wild_data(self):
+        """Send wild data to the callback function."""
+        try:
+            wild_data = self.data_generator.send_wild_data()
+            self.client.publish(self.topic, wild_data)
+            self.logger.log(f"Publisher sent wild data: {wild_data}", "SpO2", tag="error")
+        except Exception as e:
+            self.logger.log(f"Unexpected error publishing wild data: {str(e)}", "SpO2", tag="error")
+
+    def skip_transmissions(self, count):
+        """Skip a specified number of transmissions."""
+        self.data_generator.skip_transmission(count)
+        self.logger.log(f"Skipped {count} transmissions.", "Sp02", tag="special")    
 

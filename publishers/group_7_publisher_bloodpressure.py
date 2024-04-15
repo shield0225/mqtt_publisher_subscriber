@@ -1,6 +1,6 @@
 import threading
-from group_7_basepublisher import BasePublisher
-from group_7_data_generator import BloodPressureDataGenerator
+from publishers.group_7_basepublisher import BasePublisher
+from data_generators.group_7_data_generator_bloodpressure import BloodPressureDataGenerator
 
 class BloodPressurePublisher(BasePublisher):
     def __init__(self, update_callback, logger, mqtt_topic):
@@ -37,5 +37,19 @@ class BloodPressurePublisher(BasePublisher):
         self.data_generator.active = False
         self.active = False
         self.logger.log("Stopping data generation...", "Blood Pressure")
+
+    def send_wild_data(self):
+        """Send wild data to the callback function."""
+        try:
+            wild_data = self.data_generator.send_wild_data()
+            self.client.publish(self.topic, wild_data)
+            self.logger.log(f"Publisher sent wild data", "Blood Pressure", tag="error")
+        except Exception as e:
+            self.logger.log(f"Unexpected error publishing wild data: {str(e)}", "Blood Pressure", tag="error")
+
+    def skip_transmissions(self, count):
+        """Skip a specified number of transmissions."""
+        self.data_generator.skip_transmission(count)
+        self.logger.log(f"Skipped {count} transmissions.", "Blood Pressure", tag="special")
 
 

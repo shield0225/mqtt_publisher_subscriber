@@ -1,8 +1,8 @@
 import json
 import random
 import paho.mqtt.client as mqtt
-import group_7_config as config
-from group_7_SafeLogger import SafeLogger
+import Utils.group_7_config as config
+from Utils.group_7_SafeLogger import SafeLogger
 
 class BasePublisher:
     def __init__(self, update_callback, logger, mqtt_topic):

@@ -2,12 +2,13 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from datetime import datetime
 import json
-import group_7_basepublisher as basepublisher
-from group_7_SafeLogger import SafeLogger
-from group_7_publisher_heartrate import HeartRatePublisher
-from group_7_publisher_bloodpressure import BloodPressurePublisher
-from group_7_publisher_sp02 import SpO2Publisher
-import group_7_config as config
+import publishers.group_7_basepublisher as basepublisher
+from Utils.group_7_SafeLogger import SafeLogger
+from publishers.group_7_publisher_heartrate import HeartRatePublisher
+from publishers.group_7_publisher_bloodpressure import BloodPressurePublisher
+from publishers.group_7_publisher_sp02 import SpO2Publisher
+import Utils.group_7_config as config
+from functools import partial
 
 class App:
     def __init__(self, master):
@@ -39,7 +40,6 @@ class App:
 
         self.status_bar = tk.Label(title_frame, text="Connection Status: Disconnected", font=("Arial", 10))
         # Check if already connected to the broker and update the status accordingly
-
 
         if self.heart_publisher.on_connect and self.bp_publisher.on_connect and self.spo2_publisher.on_connect:
             self.status_bar.config(text="Connection Status: Connected")
@@ -88,8 +88,8 @@ class App:
         button_width = 20
         tk.Button(frame, text=f"Start", command=publisher.start, width=button_width).grid(row=2, column=8, padx=3, pady=3)
         tk.Button(frame, text=f"Stop", command=publisher.stop, width=button_width).grid(row=3, column=8, padx=3, pady=3)
-        tk.Button(frame, text=f"Send Wild Data", command=lambda: self.send_wild_data(publisher), width=button_width).grid(row=4, column=8, padx=3, pady=3)
-        tk.Button(frame, text=f"Skip Transmission", command=lambda: self.miss_transmission(publisher), width=button_width).grid(row=5, column=8, padx=3, pady=3)
+        tk.Button(frame, text=f"Send Wild Data", command=partial(self.send_wild_data, publisher, label), width=button_width).grid(row=4, column=8, padx=3, pady=3)
+        tk.Button(frame, text=f"Skip Transmission", command=partial(self.skip_transmission, publisher, label), width=button_width).grid(row=5, column=8, padx=3, pady=3)
 
     def update_log_width(self, log_frame, event):
         # Update the width of the log frame based on the window size
@@ -97,13 +97,18 @@ class App:
         log_frame.configure(width=width)
 
     def send_wild_data(self, publisher, label):
-        # Implement functionality
-        self.logger.log(f"Sending wild data for {label}", label)
+        try:
+            self.logger.log(f"====================== Sending wild data for {label} ======================", label, tag='error')         
+            publisher.send_wild_data() 
+        except Exception as e:
+            self.logger.log(f"Failed to send wild data for {label}: {str(e)}", label, tag="error")
 
     def skip_transmission(self, publisher, label):
-        # Implement functionality
-        self.logger.log(f"Skiped transmission for {label}", label)
-
+        try:
+            self.logger.log(f"====================== Skipping transmission for {label} ======================", label, tag='special')
+            publisher.skip_transmissions(1)
+        except Exception as e:
+            self.logger.log(f"Failed to skip transmission for {label}: {str(e)}", label, tag="error")
 
     def setup_log_display(self):
         """Setup the log display area and assign it to self.logger."""
