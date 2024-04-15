@@ -44,7 +44,7 @@ class HeartRatePublisher(BasePublisher):
         try:
             wild_data = self.data_generator.send_wild_data()
             self.client.publish(self.topic, wild_data)
-            self.logger.log(f"Publisher sent wild data: {wild_data}", "Heart Rate", tag="error")
+            self.logger.log(f"Publisher sent wild data", "Heart Rate", tag="error")
         except Exception as e:
             self.logger.log(f"Unexpected error publishing wild data: {str(e)}", "Heart Rate", tag="error")
 

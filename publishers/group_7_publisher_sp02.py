@@ -43,7 +43,7 @@ class SpO2Publisher(BasePublisher):
         try:
             wild_data = self.data_generator.send_wild_data()
             self.client.publish(self.topic, wild_data)
-            self.logger.log(f"Publisher sent wild data: {wild_data}", "SpO2", tag="error")
+            self.logger.log(f"Publisher sent wild data", "SpO2", tag="error")
         except Exception as e:
             self.logger.log(f"Unexpected error publishing wild data: {str(e)}", "SpO2", tag="error")
 
