@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from datetime import datetime
-import json
 import publishers.group_7_basepublisher as basepublisher
 from Utils.group_7_SafeLogger import SafeLogger
 from publishers.group_7_publisher_heartrate import HeartRatePublisher
@@ -63,7 +62,7 @@ class App:
         frame.grid(row=row, column=0, padx=10, pady=10, sticky="ew")
         self.master.columnconfigure(0, weight=1) 
         tk.Label(frame, text=f"{label}", font=("Arial", 10)).grid(row=0, column=0, sticky="w")
-        display_label = tk.Label(frame, text="N/A", font=("Arial", 11))
+        display_label = tk.Label(frame, text=f"Publishing every: {publisher.publish_interval} seconds", font=("Arial", 9))
         display_label.grid(row=0, column=1, sticky="w")
 
         # Setting up the log area for each publisher
@@ -141,9 +140,20 @@ class App:
         self.status_bar.config(text="Connection Status: Disconnected")
         self.status_bar.pack()
 
+    def on_closing(self):
+        """Called when the window is closed."""
+        self.client.disconnect() 
+        self.client.loop_stop() 
+        self.master.destroy() 
+
 if __name__ == '__main__':
-    root = tk.Tk()
-    app = App(root)
-    root.geometry("1100x650")
-    root.resizable(True, True)
-    root.mainloop()
+    root2 = tk.Tk()
+    app2 = App(root2)
+    screen_width2 = root2.winfo_screenwidth()
+    screen_height2 = root2.winfo_screenheight()
+    width2 = int(screen_width2 * 4 // 6)
+    height2 = 700
+    x2 = 0
+    y2 = 0
+    root2.geometry(f'{width2}x{height2}+{x2}+{y2}')
+    root2.mainloop()

@@ -8,7 +8,7 @@ class SpO2Publisher(BasePublisher):
         self.logger = logger
         self.active = False
         self.topic = mqtt_topic
-        self.publish_interval = 3
+        self.publish_interval = 5
         self.data_generator = Sp02DataGenerator(self.publish_data, self.publish_interval)
 
     def publish_data(self, data):
@@ -18,7 +18,7 @@ class SpO2Publisher(BasePublisher):
                 self.client.publish(self.topic, data)
                 self.logger.log(f"Published data: {data}", "SpO2")
             except Exception as e:
-                self.logger.log(f"Failed to publish data: {str(e)}", "SpO2")
+                self.logger.log(f"Corrupted data detected, not published", "SpO2", tag="error")
 
     def start(self):
         """Start the data generation and publishing process."""

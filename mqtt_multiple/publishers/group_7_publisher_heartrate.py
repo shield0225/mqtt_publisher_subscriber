@@ -1,3 +1,4 @@
+import json
 import threading
 from publishers.group_7_basepublisher import BasePublisher
 from data_generators.group_7_data_generator_heartrate import HeartRateDataGenerator
@@ -8,7 +9,7 @@ class HeartRatePublisher(BasePublisher):
         self.logger = logger
         self.active = False
         self.topic = mqtt_topic
-        self.publish_interval = 1
+        self.publish_interval = 2
             
         self.data_generator = HeartRateDataGenerator(self.publish_data, self.publish_interval, self.logger)
 
@@ -19,7 +20,7 @@ class HeartRatePublisher(BasePublisher):
                 self.client.publish(self.topic, data)
                 self.logger.log(f"Published data: {data}", "Heart Rate")
             except Exception as e:
-                self.logger.log(f"Failed to publish data: {str(e)}", "Heart Rate")
+                self.logger.log(f"Corrupted data detected, not published", "Heart Rate", tag="error")
 
     def start(self):
         """Start the data generation and publishing process."""

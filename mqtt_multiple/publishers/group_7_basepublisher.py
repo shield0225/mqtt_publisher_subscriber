@@ -32,13 +32,13 @@ class BasePublisher:
         self.transmissions_to_skip += count
 
     def potentially_corrupt_data(self, data):
-        # Randomly corrupt data based on a predefined chance
+        # Randomly corrupt data
         chance_to_corrupt = 0.1  # 10% chance to corrupt data
         if random.random() < chance_to_corrupt:
-            # mutate the value to a negative number if corrupted
+            # Mutate the value to a negative number if corrupted
             data['value'] = -data['value']
-            self.logger.log(f"Data corrupted for {self.__class__.__name__}.")
-        return data    
+            self.logger.log(f"Corrupted data detected, not published", self.__class__.__name__, tag="error")
+        return data
 
     def publish_data(self, data, topic):
         if self.active and self.transmissions_to_skip <= 0:

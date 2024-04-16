@@ -18,7 +18,7 @@ class BloodPressurePublisher(BasePublisher):
                 self.client.publish(self.topic, data)
                 self.logger.log(f"Published data: {data}", "Blood Pressure")
             except Exception as e:
-                self.logger.log(f"Failed to publish data: {str(e)}", "Blood Pressure")
+                self.logger.log(f"Corrupted data detected, not published", "Blood Pressure", tag="error")
 
     def start(self):
         """Start the data generation and publishing process."""
